@@ -5,6 +5,9 @@
 # ── Public interface (called by daemon.sh) ──
 
 supervisor_start() {
+  # Unset proxy env vars — Feishu WebSocket connections fail with HTTP 400
+  # if a proxy is in the environment. Keep all other variables intact.
+  unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy
   if command -v setsid >/dev/null 2>&1; then
     setsid node "$SKILL_DIR/dist/daemon.mjs" >> "$LOG_FILE" 2>&1 < /dev/null &
   else

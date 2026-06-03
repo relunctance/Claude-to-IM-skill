@@ -190,3 +190,22 @@ For more complex issues (messages not received, permission timeouts, high memory
 - Always check for config.env before starting the daemon — without it the process crashes on startup and leaves a stale PID file that blocks future starts (requiring manual cleanup).
 - The daemon runs as a background Node.js process managed by platform supervisor (launchd on macOS, setsid on Linux, WinSW/NSSM on Windows).
 - Config persists at `~/.claude-to-im/config.env` — survives across sessions.
+
+
+## Known Issues & Fixes
+
+### Feishu WebSocket returns HTTP 400 after successful connection
+**Symptom:** Bridge connects to Feishu (botOpenId resolves) but WebSocket repeatedly logs `Request failed with status code 400`.
+**Root cause:** An HTTP proxy in the environment (`https_proxy`, `http_proxy`, etc.) cannot forward WebSocket upgrade requests correctly — Feishu returns 400.
+**Fix:** `supervisor-linux.sh` unsets proxy env vars before starting. If your system has a proxy, the bridge will now connect directly.
+
+### Setup wizard writes wrong config keys
+**Symptom:** Bridge fails to start with "No adapters started successfully" even though credentials are correct.
+**Root cause:** The `loadConfig()` function expects `CTI_ENABLED_CHANNELS` (not `CTI_CHANNELS`), `CTI_DEFAULT_WORKDIR` (not `CTI_WORKING_DIR`), and `CTI_DEFAULT_MODE` (not `CTI_MODE`).
+**Fix:** Always verify config keys match `config.env.example` in the repo root.
+
+### Feishu bot connected but messages not received
+**Symptom:** Feishu adapter starts (botOpenId resolved), but messages sent to the bot don't trigger responses.
+**Root cause:** Feishu event subscription (`im.message.receive_v1`) was not saved in the developer console. Phase 2 requires the bridge to be running when you configure and save events (Feishu validates the WebSocket connection on save).
+**Fix:** Ensure Phase 2 is completed while the bridge is running, then republish the app version.
+
